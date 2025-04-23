@@ -1,47 +1,47 @@
 import streamlit as st
-import numpy as np
-from tensorflow.keras.models import load_model
-from keras_preprocessing.sequence import pad_sequences
-import pickle
-import os
-
-# Constants
-MODEL_PATH = "model/model.h5"
-TOKENIZER_PATH = "model/tokenizer.pkl"
-TFIDF_PATH = "model/tfidf_vectorizer.pkl"
-MAX_WORDS = 300
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
 
 # Title
 st.title("🕵️ Fake Review Detector")
+st.write("This app detects whether a review is **fake** or **genuine** using machine learning.")
 
-# Load model and supporting objects with error handling
 @st.cache_resource
-def load_artifacts():
-    try:
-        model = load_model(MODEL_PATH)
-        with open(TOKENIZER_PATH, "rb") as f:
-            tokenizer = pickle.load(f)
-        with open(TFIDF_PATH, "rb") as f:
-            tfidf = pickle.load(f)
-        return model, tokenizer, tfidf
-    except Exception as e:
-        st.error(f"Error loading model or tokenizer: {e}")
-        return None, None, None
+def load_and_train_model():
+    # Load dataset
+    df = pd.read_csv("reviews-dataset.csv")
 
-model, tokenizer, tfidf = load_artifacts()
+    # Drop missing values
+    df.dropna(subset=["text", "label"], inplace=True)
 
-review = st.text_area("Paste a review to check if it's Fake or Real")
+    # Split data
+    X = df["text"]
+    y = df["label"]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-if st.button("Predict"):
-    if model and review.strip():
-        # Preprocess input
-        tfidf_input = tfidf.transform([review]).toarray()
-        seq_input = tokenizer.texts_to_sequences([review])
-        padded_seq = pad_sequences(seq_input, maxlen=MAX_WORDS)
+    # Create and train pipeline
+    pipeline = Pipeline([
+        ('tfidf', TfidfVectorizer(max_features=5000)),
+        ('clf', LogisticRegression())
+    ])
+    pipeline.fit(X_train, y_train)
 
-        # Predict
-        pred = model.predict([tfidf_input, padded_seq])
-        prediction = "Fake Review ❌" if round(pred[0][0]) == 0 else "Genuine Review ✅"
-        st.subheader(f"Prediction: {prediction}")
+    return pipeline
+
+# Load and train model once
+model = load_and_train_model()
+
+# Input text
+review = st.text_area("Enter a review to analyze")
+
+# Prediction
+if st.button("Check Review"):
+    if review.strip():
+        prediction = model.predict([review])[0]
+        st.success(f"**Prediction:** This review is **{'Fake' if prediction == 1 else 'Genuine'}**.")
     else:
-        st.warning("Please make sure the model is loaded and the input is not empty.")
+        st.warning("Please enter some text.")
+
