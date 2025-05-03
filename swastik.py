@@ -6,7 +6,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
-st.title("🕵️ Fake Review Detector (with Smart Heuristics)")
+st.title("🕵️ Fake Review Detector (with Smart Heuristics) By SWASTIK TRIPATHI")
 st.write("This app detects whether a review is **fake** or **genuine** using both machine learning and smart rules.")
 
 # Heuristic-based flagging
